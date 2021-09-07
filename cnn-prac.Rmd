@@ -1,0 +1,185 @@
+---
+title: "CNN Practical: Classifying invasive species"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(keras)
+library(dplyr)
+library(imager)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview 
+In this section we'll build a CNN to predict whether an image contains an invasive species or not. The data is taken from [this Kaggle problem](https://www.kaggle.com/c/invasive-species-monitoring). The data set contains pictures taken in a Brazilian national forest. In some of the pictures there is Hydrangea, a beautiful invasive species original of Asia. We would like to predict the presence of the invasive species. Some of the code in this example is taken from one of the Kaggle competition "kernels" (code people make publicly available) [here](https://www.kaggle.com/ogurtsov/0-99-with-r-and-keras-inception-v3-fine-tune).
+
+We store our images in a very particular way:
+
+* Separate folders for training, test, and validation images
+* Within each folder (e.g. within the training folder), separate folders for each class (e.g. a folder for invasives and a folder for non-invasives).
+
+We start by specifying where our training, test, and validation images are. Later on we'll remove the reference to "sample" below to use the full set of images.
+
+
+```{r paths}
+train_directory <- "data/invasives/train/"
+validation_directory <- "data/invasives/validation/"
+test_directory <- "data/invasives/test/"
+```
+
+Let's have a look at one of the images of the invasive species:
+```{r img1}
+img <- load.image("data/invasives/train/invasive/0003.jpg")
+plot(img)
+```
+And one a non-invasive species:
+```{r img2}
+img <- load.image("data/invasives/train/non_invasive/0022.jpg")
+plot(img)
+```
+
+Each image will be resized to `img_width` $\times$ `img_height`, specified below. If you leave this step out, images will be used as is, which can be a problem if images are of different sizes.
+
+```{r resize}
+img_height <- 224
+img_width <- 224
+batch_size <- 16
+```
+
+Next we calculate the number of images in our training, validation, and test samples. We do this by counting up the total number of files in the directories (note this means you should only have the image files in each directory)
+
+Number of training images:
+
+```{r ntrain}
+train_samples <- length(list.files(paste(train_directory,"invasive",sep=""))) +
+    length(list.files(paste(train_directory,"non_invasive",sep="")))
+train_samples
+```
+
+Number of validation images:
+
+```{r nval}
+validation_samples <- length(list.files(paste(validation_directory,"invasive",sep=""))) +
+    length(list.files(paste(validation_directory,"non_invasive",sep="")))
+validation_samples
+```
+
+And number of test images:
+
+```{r ntest}
+test_samples <- length(list.files(paste(test_directory,"invasive",sep=""))) +
+    length(list.files(paste(test_directory,"non_invasive",sep="")))
+test_samples
+```
+
+The next block uses a handy Keras function called `flow_images_from_directory()`, which generates batches of data from images in a directory. We need one of these for each of the training, validation, and test images.
+
+For the training images:
+
+```{r traingen}
+train_generator <- flow_images_from_directory(
+  train_directory, 
+  generator = image_data_generator(), 
+  target_size = c(img_height, img_width),
+  color_mode = "rgb",
+  class_mode = "binary", 
+  batch_size = batch_size, 
+  shuffle = TRUE,
+  seed = 123)
+```
+
+For the validation images:
+
+```{r valgen}
+validation_generator <- flow_images_from_directory(
+  validation_directory, 
+  generator = image_data_generator(), 
+  target_size = c(img_height, img_width), 
+  color_mode = "rgb", 
+  classes = NULL,
+  class_mode = "binary", 
+  batch_size = batch_size, 
+  shuffle = TRUE,
+  seed = 123)
+```
+
+And for the test images:
+
+```{r testgen}
+test_generator <- flow_images_from_directory(
+  test_directory, 
+  generator = image_data_generator(),
+  target_size = c(img_height, img_width), 
+  color_mode = "rgb", 
+  class_mode = "binary", 
+  batch_size = 1,
+  shuffle = FALSE) 
+```
+
+Define and compile the CNN in a similar way to before. We first initialise the model in the block below:
+
+```{r initmod}
+model <- keras_model_sequential() 
+```
+
+Now add a single convolutional layer using a `relu` activation. After this, add a dropout layer (say 20% dropout) and after that, a max pooling pooling. Take note of the `input_shape` size; the last value is 3 because this is a colour (RGB) image:
+
+```{r cnn1}
+model %>%
+  layer_conv_2d(filters = 16,           
+                kernel_size = c(3,3),             
+                input_shape = c(img_height, img_width, 3)) %>%   
+  layer_activation('relu') %>%                     
+  layer_dropout(rate = 0.20) %>%                  
+  layer_max_pooling_2d(pool_size = c(2, 2)) 
+```
+
+Now concatenate (flatter) the output of the convolutional layer and add a hidden dense layer with 32 nodes and a relu activation:
+
+```{r cnn2}
+model %>%    
+  layer_flatten() %>%                            
+  layer_dense(units = 32, activation = 'relu')
+```
+
+Finally, add the output layer. We have a binary classification problem, so we use a single output neuron with a sigmoid activation.
+
+```{r cnn3}
+model %>%
+  layer_dense(units = 1, activation = 'sigmoid')
+```
+
+Inspect the model
+```{r}
+summary(model)
+```
+
+Compile the model
+
+```{r compile}
+model %>% compile(
+  loss = 'binary_crossentropy',
+  optimizer = 'adam',
+  metrics = c('accuracy')
+)
+```
+
+Now fit the model. This is slightly different from before because of the use of generators - we now have to use a function called `fit_generator()`, because we have used the `flow_images_from_directory()` function to "generate" batches of images (see above).
+
+```{r fit}
+model %>% fit_generator(
+  train_generator,
+  steps_per_epoch = as.integer(train_samples / batch_size), 
+  epochs = 5, 
+  validation_data = validation_generator,
+  validation_steps = as.integer(validation_samples / batch_size),
+  verbose = 1)
+```
+
+Evaluate the model on test data.
+
+```{r evaluate}
+model %>% evaluate_generator(test_generator, steps = test_samples)
+```
+
+Currently this model isn't doing well at all, but this is just a demo. We'd need to run it for longer, try different architectures, check our input data, etc. More on this later!

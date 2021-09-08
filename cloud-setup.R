@@ -1,0 +1,13 @@
+# run this if installing from Rstudio Cloud
+install.packages('imager')
+install.packages('knitr')
+install.packages('dplyr')
+install.packages('ggplot2')
+install.packages('tidyr')
+install.packages('reticulate')
+install.packages('keras')
+library(reticulate)
+library(keras)
+virtualenv_create("myenv")
+use_virtualenv("myenv", required = TRUE)
+install_keras(method="virtualenv", envname="myenv", pip_options = "--no-cache-dir")

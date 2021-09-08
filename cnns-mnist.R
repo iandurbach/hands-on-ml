@@ -5,8 +5,6 @@ library(tidyr)
 
 # load data
 load("data/mnist_small.Rdata")
-mnist <- mnist_small
-rm(mnist_small)
 
 # set up training and test data (there's no validation data here, for no good reason)
 x_train <- mnist$train$x

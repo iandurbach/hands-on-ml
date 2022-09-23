@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
-load("data/aloe.RData")
+load("intro-workshop/data/aloe.RData")
 
 # have a look at data
 head(aloe_pa)
@@ -90,6 +90,15 @@ model %>% evaluate(x_test, y_test, batch_size=32, verbose = 1)
 
 # get predictions on another dataset
 model %>% predict_classes(x_test) 
+
+# partial dependence
+
+names(aloe_pa)
+xt <- matrix(0, nrow = 500, ncol = 20)
+xt[,4] <- seq(from = -3, to = 3, length.out = 500)
+# get predictions on another dataset
+preds <- model %>% predict_proba(xt) 
+plot(x = xt[,4], y = preds, type = "l")
 
 ## ----------------------------------------------------------------------------------------------------------
 

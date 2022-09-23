@@ -1,0 +1,137 @@
+---
+title: "08 - Neural Nets - Sales Regression"
+author: Emmanuel Dufourq 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a RMarkdown version of the Google Colab notebook at https://colab.research.google.com/drive/1QkpZ_2F4X5sLXpvdRSUElp1-2DeBe2qg. The data imports and normalisation code snippets were extracted from https://towardsdatascience.com/keras-with-r-predicting-car-sales-31f48a58bf6
+
+Please note that before running this notebook you'll need to have keras and tensorflow installed and linked to R. If running this on RStudio Cloud this will have been done for you, and you just need to run the following lines
+
+```{r}
+library(keras)
+use_virtualenv("myenv", required = TRUE)   # don't run this unless you installed keras in a virtualenv
+```
+
+### Load the car sales dataset
+
+```{r}
+sales <- read.csv(url("https://raw.githubusercontent.com/MGCodesandStats/datasets/master/cars.csv"), header = TRUE)
+sales
+```
+
+### Normalise the data
+
+```{r}
+# Max-Min Normalization
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+maxmindf <- as.data.frame(lapply(sales, normalize))
+attach(maxmindf)
+maxmindf
+```
+
+### Remove the header from the data frame and convert into a matrix
+
+```{r}
+names(maxmindf) <- NULL
+sales = data.matrix(maxmindf)
+```
+
+### Check the dimensions
+
+```{r}
+dim(sales)
+```
+
+### Have a look at some of the data
+
+```{r}
+sales[0:10,]
+```
+
+### Check a summary of the data
+
+```{r}
+summary(sales)
+```
+
+### Split data into features and target
+
+```{r}
+sales_features <- sales[,1:5]
+sales_target <- sales[,6]
+```
+
+### Split the data into training and testing
+
+```{r}
+# Determine sample size
+ind <- sample(2, nrow(sales), replace=TRUE, prob=c(0.70, 0.30))
+
+# Split the data
+x_train <- sales_features[ind==1, 1:4]
+x_test <- sales_features[ind==2, 1:4]
+
+# Split the class attribute
+y_train <- sales_target[ind==1]
+y_test <- sales_target[ind==2]
+```
+
+### Define the model architecture
+
+```{r}
+dim(x_train)[2]
+```
+
+```{r}
+model <- keras_model_sequential() %>%
+    layer_dense(units = 16, activation = "relu",input_shape = dim(x_train)[2]) %>%
+    layer_dense(units = 8, activation = "relu") %>%
+    layer_dense(units = 4,activation = "relu") %>%
+    layer_dense(units = 1)
+```
+
+Always start with a simple model
+
+```{r}
+simple_model <- keras_model_sequential() %>%
+    layer_dense(units = 4, activation = "relu",input_shape = dim(x_train)[2]) %>%
+    layer_dense(units = 1)
+```
+
+### Compile the model
+
+```{r}
+simple_model %>% compile(
+    loss = "mse",
+    optimizer = 'adam',
+    metrics = list("mean_absolute_error")
+  )
+```
+### Train the model
+
+```{r}
+history <- simple_model %>% fit(
+  x_train, y_train, 
+  epochs = 220, batch_size = 50, 
+  validation_split = 0.1, shuffle = TRUE
+)
+```
+
+### Plot the performance
+
+```{r}
+plot(history)
+```
+
+### Evaluate the performance
+
+```{r}
+simple_model %>% evaluate(x_test, y_test)
+```

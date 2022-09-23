@@ -1,0 +1,181 @@
+#' ---
+#' title: "08 - Neural Nets - Iris Classification"
+#' author: Emmanuel Dufourq 
+#' output: html_document
+#' ---
+#' 
+## ----setup, include=FALSE-----------------------------------------------------------------------
+knitr::opts_chunk$set(echo = TRUE)
+
+#' 
+#' This is a RMarkdown version of the Google Colab notebook at https://colab.research.google.com/drive/10FzlXsDz_fPM3V7rFuFeYcr6tXBcllHm. The data imports and normalisation code snippets were extracted from https://www.datacamp.com/community/tutorials/keras-r-deep-learning
+#' 
+#' Please note that before running this notebook you'll need to have keras and tensorflow installed and linked to R. If running this on RStudio Cloud this will have been done for you, and you just need to run the following lines
+#' 
+## -----------------------------------------------------------------------------------------------
+library(keras)
+use_virtualenv("myenv", required = TRUE)   # don't run this unless you installed keras in a virtualenv
+
+#' 
+#' ### Read in `iris` data
+#' 
+## -----------------------------------------------------------------------------------------------
+iris <- read.csv(url("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"), header = FALSE)
+
+#' 
+#' ### Return the first part of `iris`
+#' 
+## -----------------------------------------------------------------------------------------------
+head(iris)
+
+#' 
+#' ### Inspect the structure
+#' 
+## -----------------------------------------------------------------------------------------------
+str(iris)
+
+#' 
+#' ### Obtain the dimensions
+#' 
+## -----------------------------------------------------------------------------------------------
+dim(iris)
+names(iris) <- c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Species")
+iris <- as.data.frame(iris)
+iris
+
+#' 
+#' ### Plot the data points
+#' 
+## -----------------------------------------------------------------------------------------------
+plot(iris$Petal.Length, 
+     iris$Petal.Width, 
+     pch=21, bg=c("red","green3","blue")[unclass(iris$Species)], 
+     xlab="Petal Length", 
+     ylab="Petal Width")
+
+numerical_target <- factor(iris[,5]) 
+iris[,5] <- as.numeric(numerical_target) -1
+
+#' 
+#' 
+#' ### Turn `iris` into a matrix
+#' 
+## -----------------------------------------------------------------------------------------------
+iris <- as.matrix(iris)
+iris
+
+#' 
+#' ### Check the dimensions
+#' 
+## -----------------------------------------------------------------------------------------------
+dim(iris)
+
+#' 
+#' 
+#' ### Normalize the `iris` data
+#' 
+## -----------------------------------------------------------------------------------------------
+iris_features <- scale(iris[,1:4])
+iris_target <- iris[,5]
+
+#' 
+#' ### Return the summary of `iris`
+#' 
+## -----------------------------------------------------------------------------------------------
+summary(iris_features)
+
+#' 
+#' ### Return the summary of `iris`
+#' 
+## -----------------------------------------------------------------------------------------------
+summary(iris_target)
+
+#' 
+#' ### Split the data into training and testing
+#' 
+## -----------------------------------------------------------------------------------------------
+# Determine sample size
+ind <- sample(2, nrow(iris), replace=TRUE, prob=c(0.67, 0.33))
+
+# Split the `iris` data
+x_train <- iris_features[ind==1, 1:4]
+x_test <- iris_features[ind==2, 1:4]
+
+# Split the class attribute
+y_train <- iris_target[ind==1]
+y_test <- iris_target[ind==2]
+
+#' 
+#' ### Convert targets/labels to their one-hot encoded equivalent
+#' 
+## -----------------------------------------------------------------------------------------------
+y_train <- to_categorical(y_train)
+y_test_original = y_test
+y_test <- to_categorical(y_test)
+
+#' 
+#' ### Check dimensions of tagets
+#' 
+## -----------------------------------------------------------------------------------------------
+dim(y_train)
+dim(y_test)
+
+#' 
+#' ### Define the model
+#' 
+## -----------------------------------------------------------------------------------------------
+model <- keras_model_sequential() 
+model %>% 
+    layer_dense(units = 8, activation = 'relu', input_shape = c(4)) %>% 
+    layer_dropout(rate = 0.5) %>%
+    layer_dense(units = 3, activation = 'softmax')
+
+#' 
+#' ### Print out a summary of the network architecture
+#' 
+## -----------------------------------------------------------------------------------------------
+summary(model)
+
+#' 
+#' ### Compile the model.
+#' 
+#' We need to provide extra information to train the model. We need to specify the loss function, the optimiser and what metric to display to the user.
+#' 
+## -----------------------------------------------------------------------------------------------
+model %>% compile(
+  loss = 'categorical_crossentropy',
+  optimizer = optimizer_adam(lr = 0.01),
+  metrics = c('accuracy'),
+)
+
+#' 
+#' ### Training the neural network
+#' 
+## -----------------------------------------------------------------------------------------------
+history <- model %>% fit(
+  x_train, y_train, 
+  epochs = 300, batch_size = 5, 
+  validation_split = 0.2, shuffle = TRUE
+)
+
+#' 
+#' ### Plot the training performance.
+#' 
+#' When calling the fit function, Keras provides feedback of what happens to the loss during training. This is useful in determining if the model was over-fitting for example.
+#' 
+## -----------------------------------------------------------------------------------------------
+plot(history)
+
+#' 
+#' ### Evaluate the performance on the test data
+#' 
+## -----------------------------------------------------------------------------------------------
+model %>% evaluate(x_test, y_test)
+
+#' 
+#' ### Display confusion matrix
+#' 
+## -----------------------------------------------------------------------------------------------
+Y_test_hat <- predict_classes(model, x_test)
+table(y_test_original, Y_test_hat)
+

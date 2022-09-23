@@ -1,10 +1,11 @@
 library(keras)
+use_virtualenv("myenv", required = TRUE)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 
 # load data
-load("data/mnist_small.Rdata")
+load("intro-workshop/data/mnist_small.Rdata")
 
 # set up training and test data (there's no validation data here, for no good reason)
 x_train <- mnist$train$x

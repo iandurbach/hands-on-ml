@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(keras)
+use_virtualenv("myenv", required = TRUE)
 library(dplyr)
 library(imager)
 knitr::opts_chunk$set(echo = TRUE)
@@ -22,19 +23,19 @@ We start by specifying where our training, test, and validation images are. Late
 
 
 ```{r paths}
-train_directory <- "data/invasives/train/"
-validation_directory <- "data/invasives/validation/"
-test_directory <- "data/invasives/test/"
+train_directory <- "intro-workshop/data/invasives/train/"
+validation_directory <- "intro-workshop/data/invasives/validation/"
+test_directory <- "intro-workshop/data/invasives/test/"
 ```
 
 Let's have a look at one of the images of the invasive species:
 ```{r img1}
-img <- load.image("data/invasives/train/invasive/0003.jpg")
+img <- load.image("intro-workshop/data/invasives/train/invasive/0003.jpg")
 plot(img)
 ```
 And one a non-invasive species:
 ```{r img2}
-img <- load.image("data/invasives/train/non_invasive/0022.jpg")
+img <- load.image("intro-workshop/data/invasives/train/non_invasive/0022.jpg")
 plot(img)
 ```
 

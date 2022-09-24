@@ -176,6 +176,7 @@ model %>% evaluate(x_test, y_test)
 ### Display confusion matrix
 
 ```{r}
-Y_test_hat <- predict_classes(model, x_test)
+# update to video: predict_classes deprecated from tensorflow >= v2.6
+Y_test_hat <- model %>% predict(x_test) %>% k_argmax() %>% as.numeric()
 table(y_test_original, Y_test_hat)
 ```

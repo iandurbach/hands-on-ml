@@ -66,8 +66,8 @@ attributes(train_data) # previous means and sds used to scale stored here
 #' 
 ## -----------------------------------------------------------------------------------------------
 
-test_data <- scale(test_data, center = attr(x_train, "scaled:center"), 
-                scale = attr(x_train, "scaled:scale"))
+test_data <- scale(test_data, center = attr(train_data, "scaled:center"), 
+                scale = attr(train_data, "scaled:scale"))
 
 #' 
 #' ### Define the model

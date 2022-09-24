@@ -21,7 +21,7 @@ use_virtualenv("myenv", required = TRUE)   # don't run this unless you installed
 
 ```{r}
 sales <- read.csv(url("https://raw.githubusercontent.com/MGCodesandStats/datasets/master/cars.csv"), header = TRUE)
-sales
+head(sales, 30)
 ```
 
 ### Normalise the data
@@ -33,7 +33,7 @@ normalize <- function(x) {
 }
 maxmindf <- as.data.frame(lapply(sales, normalize))
 attach(maxmindf)
-maxmindf
+head(maxmindf, 30)
 ```
 
 ### Remove the header from the data frame and convert into a matrix
